@@ -1,0 +1,43 @@
+name: Build WDA
+
+on:
+  workflow_dispatch:
+    inputs:
+      wda_version:
+        description: 'WDA版本'
+        required: false
+        default: 'v3.16.0'
+
+jobs:
+  build:
+    runs-on: macos-12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: appium/WebDriverAgent
+          ref: ${{ github.event.inputs.wda_version }}
+
+      - name: Build
+        run: |
+          xcodebuild build-for-testing \
+            -project WebDriverAgent.xcodeproj \
+            -scheme WebDriverAgentRunner \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath ./DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            IPHONEOS_DEPLOYMENT_TARGET=14.0
+
+      - name: Package
+        run: |
+          mkdir -p output
+          cd ./DerivedData/Build/Products/Debug-iphoneos
+          zip -r ../../../../output/WDA.zip .
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: WDA-iOS14
+          path: output
